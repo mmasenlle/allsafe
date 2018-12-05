@@ -1,0 +1,23 @@
+cmake_minimum_required (VERSION 2.6)
+project (musched_monit)
+file(GLOB SOURCES "*.cpp")
+# Insima Teknologia SLL 22-07-2016
+if (WIN32)
+    add_definitions(/D_WIN32_WINNT=0x0501)
+endif()
+
+set(BOOST_INCLUDEDIR "L:/MUSCHED/lib/boost_1_55_0")
+set(BOOST_LIBRARYDIR "L:/MUSCHED/lib/boost_1_55_0/stage/lib")
+include_directories(${BOOST_INCLUDEDIR})
+link_directories(${BOOST_LIBRARYDIR})
+
+add_definitions(-D_FILE_OFFSET_BITS=64)
+
+if (WIN32)
+add_executable(musched_monit ${SOURCES})
+target_link_libraries(musched_monit "netapi32.lib")
+target_link_libraries(musched_monit "version.lib")
+else ()
+add_definitions(-Dlnx)
+add_executable(musched_monit ${SOURCES})
+endif()
