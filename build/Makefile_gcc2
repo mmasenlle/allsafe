@@ -1,0 +1,86 @@
+
+OBJ=sched_queues.o resources.o wserver.o props_sched.o musched.o \
+	epsilon_processer.o rdiff_processer.o old_files_data.o ofd_processer.o \
+	persistence.o servlets.o md5.o prios.o dirs.o dict.o explore.o \
+	sftp_sched.o file_watcher.o mod_files.o mssql.o oracle.o ptasks.o \
+	musched_version.o cc_rules.o sqlite3.o rdiff_sched.o sha1.o mails.o \
+	localBackend.o sshBackend.o zlib_sched.o conf_sched.o musched_test.o \
+	quickmail_auth_login.o explore_day.o minigzip.o conf_dbs.o stats_dbs.o \
+	basic_smtp_comm.o tls_smtp_comm.o ssl_smtp_comm.o styles.o allsafe.o \
+	restore_folder.o http_client.o cipher.o
+
+
+FLAGS_DEBUG=-O -g -DDEBUG -DWITH_OPENSSL
+FLAGS_RELEASE=-O2 -DNDEBUG -DWITH_OPENSSL
+DEFINES=-Dlnx
+SPATH=../src
+INC=-I ../lib/boost_1_55_0 -I ${SPATH} -I ${SPATH}/smtp
+BOOST_LIBS=../lib/boost_1_55_0/stage/lib/libboost_system.a \
+                   ../lib/boost_1_55_0/stage/lib/libboost_thread.a \
+                   ../lib/boost_1_55_0/stage/lib/libboost_serialization.a \
+				   ../lib/boost_1_55_0/stage/lib/libboost_log_setup.a \
+                   ../lib/boost_1_55_0/stage/lib/libboost_log.a \
+				   ../lib/boost_1_55_0/stage/lib/libboost_locale.a \
+                   ../lib/boost_1_55_0/stage/lib/libboost_date_time.a \
+                   ../lib/boost_1_55_0/stage/lib/libboost_program_options.a \
+                   ../lib/boost_1_55_0/stage/lib/libboost_filesystem.a
+
+FLAGS=${FLAGS_DEBUG}
+
+ifeq ($(DEBUG), 0)
+FLAGS=${FLAGS_RELEASE}
+endif
+
+.PHONY: clean all
+
+all: ${OBJ} musched_version
+	g++ -o musched ${OBJ} ${BOOST_LIBS} \
+		libsigar.a libefsw.a libz.a librsync.a libssh2.a libssl.a libcrypto.a -ldl -pthread
+
+resources.o: ${SPATH}/resources.cpp
+	g++ -c ${DEFINES} ${FLAGS} ${INC} -I ../lib/sigar/include ${SPATH}/resources.cpp
+
+persistence.o: ${SPATH}/persistence.cpp
+	g++ -c ${DEFINES} ${FLAGS} -I ../lib/sqllite3 ${INC} ${SPATH}/persistence.cpp
+
+sftp_sched.o: ${SPATH}/sftp_sched.cpp
+	g++ -c ${DEFINES} ${FLAGS} ${INC} -I ../lib/libssh2/include ${SPATH}/sftp_sched.cpp
+
+file_watcher.o: ${SPATH}/file_watcher.cpp
+	g++ -c ${DEFINES} ${FLAGS} ${INC} -I ../lib/efsw/include ${SPATH}/file_watcher.cpp
+
+mails.o: ${SPATH}/smtp/mails.cpp
+	g++ -c ${DEFINES} ${FLAGS} ${INC} ${SPATH}/smtp/mails.cpp
+
+rdiff_sched.o: ${SPATH}/rdiff_sched.cpp
+	g++ -c ${DEFINES} ${FLAGS} ${INC} -I ../lib/librsync/src -I ../lib/librsync/build/src ${SPATH}/rdiff_sched.cpp
+
+zlib_sched.o: ${SPATH}/zlib_sched.cpp
+	g++ -c ${DEFINES} ${FLAGS} ${INC} -I ../lib/zlib-1.2.8 -I ../lib/zlib-1.2.8/build ${SPATH}/zlib_sched.cpp
+
+minigzip.o: ${SPATH}/minigzip.c
+	gcc -c ${DEFINES} ${FLAGS} ${INC} -I ../lib/zlib-1.2.8 -I ../lib/zlib-1.2.8/build ${SPATH}/minigzip.c
+
+basic_smtp_comm.o: ${SPATH}/smtp/basic_smtp_comm.cpp
+	g++ -c ${DEFINES} ${FLAGS} ${INC} ${SPATH}/smtp/basic_smtp_comm.cpp
+
+tls_smtp_comm.o: ${SPATH}/smtp/tls_smtp_comm.cpp
+	g++ -c ${DEFINES} ${FLAGS} ${INC} ${SPATH}/smtp/tls_smtp_comm.cpp
+
+ssl_smtp_comm.o: ${SPATH}/smtp/ssl_smtp_comm.cpp
+	g++ -c ${DEFINES} ${FLAGS} ${INC} ${SPATH}/smtp/ssl_smtp_comm.cpp
+
+quickmail_auth_login.o: ${SPATH}/smtp/quickmail_auth_login.cpp
+	g++ -c ${DEFINES} ${FLAGS} ${INC} ${SPATH}/smtp/quickmail_auth_login.cpp
+
+sqlite3.o:
+	gcc -c ${DEFINES} ${FLAGS} -I ../lib/sqllite3 ../lib/sqllite3/sqlite3.c
+
+musched_version:
+	g++ -c ${DEFINES} ${FLAGS} ${SPATH}/musched_version.cpp
+
+%.o : ${SPATH}/%.cpp
+	g++ -c ${DEFINES} ${FLAGS} ${INC} $<
+
+clean:
+	rm -f *.o musched

@@ -1,0 +1,45 @@
+cmake_minimum_required (VERSION 2.6)
+project (musched)
+file(GLOB SOURCES "*.cpp")
+
+if (WIN32)
+    add_definitions(/D_WIN32_WINNT=0x0501)
+endif()
+
+if (NOT DEFINED     BOOST_ROOT        AND
+    NOT DEFINED ENV{BOOST_ROOT}       AND
+    NOT DEFINED     BOOST_INCLUDEDIR  AND
+    NOT DEFINED ENV{BOOST_INCLUDEDIR} AND
+    NOT DEFINED     BOOST_LIBRARYDIR  AND
+    NOT DEFINED ENV{BOOST_LIBRARYDIR})
+    if (APPLE)
+        set(BOOST_ROOT "../../../boost/boost_1_54_0/mac")
+    elseif (WIN32)
+        set(BOOST_INCLUDEDIR "C:/src/boost_1_55_0")
+        set(BOOST_LIBRARYDIR "C:/src/boost_1_55_0/stage/lib")
+    endif()
+endif()
+if (APPLE OR WIN32)
+    set(Boost_USE_STATIC_LIBS TRUE)
+endif()
+#find_package(Boost 1.32 REQUIRED COMPONENTS program_options)
+
+include_directories(${BOOST_INCLUDEDIR})
+link_directories(${BOOST_LIBRARYDIR})
+
+if (WIN32)
+include_directories("C:/src/sigar/sigar/include")
+#include_directories("C:/src/libcurl")
+include_directories("C:/srctests/sqllite3")
+include_directories("C:/srctests/libssh2/include")
+include_directories("C:/srctests/efsw/include")
+link_directories("C:/src/musched/windows")
+add_executable(musched ${SOURCES} "C:/srctests/sqllite3/sqlite3.c" "wmi__.cxx")
+target_link_libraries(musched "sigar.lib")
+#target_link_libraries(musched "libcurld_imp.lib")
+target_link_libraries(musched "libssh2.lib")
+target_link_libraries(musched "efsw-debug.lib")
+else ()
+add_definitions(-Dlnx)
+add_executable(musched ${SOURCES})
+endif()

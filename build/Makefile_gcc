@@ -1,0 +1,93 @@
+
+OBJ=sched_queues.o resources.o wserver.o props_sched.o main.o \
+	old_files_data.o ofd_processer.o \
+	persistence.o prios.o dirs.o dict.o explore.o \
+	sftp_sched.o file_watcher.o mod_files.o ptasks.o \
+	main_version.o cc_rules.o sqlite3.o rdiff_sched.o sha1.o mails.o \
+	localBackend.o sshBackend.o zlib_sched.o conf_sched.o main_test.o \
+	quickmail_auth_login.o explore_day.o minigzip.o \
+	basic_smtp_comm.o tls_smtp_comm.o ssl_smtp_comm.o styles.o allsafe.o \
+	restore_folder.o http_client.o
+
+
+FLAGS_DEBUG=-O -g -DDEBUG
+FLAGS_RELEASE=-O2 -DNDEBUG
+DEFINES=-Dlnx -DNO_PROCESS
+SPATH=../src
+#INC=-I ../lib/boost_1_55_0 -I ${SPATH} -I ${SPATH}/smtp
+INC=-I ${SPATH} -I ${SPATH}/smtp -I ../../libs_src/boost_1_63_0
+
+BDIR=../../libs_src/boost_1_63_0/stage/lib
+BTAG=-gcc49-mt-1_63.a
+BOOST_LIBS=${BDIR}/libboost_system${BTAG} \
+           ${BDIR}/libboost_thread${BTAG} \
+           ${BDIR}/libboost_serialization${BTAG} \
+           ${BDIR}/libboost_date_time${BTAG} \
+           ${BDIR}/libboost_program_options${BTAG} \
+           ${BDIR}/libboost_filesystem${BTAG} \
+           ${BDIR}/libboost_log_setup${BTAG} \
+           ${BDIR}/libboost_log${BTAG}
+
+LIBS=-lz -lssl -lcrypto -ldl -pthread
+
+FLAGS=${FLAGS_DEBUG}
+
+ifeq ($(DEBUG), 0)
+FLAGS=${FLAGS_RELEASE}
+endif
+
+.PHONY: clean all
+
+all: ${OBJ} main_version
+	g++ -o allsafe ${OBJ} libssh2.a -L . -lsigar -lefsw -lrsync ${BOOST_LIBS} ${LIBS}
+
+resources.o: ${SPATH}/resources.cpp
+	g++ -c ${DEFINES} ${FLAGS} ${INC} -I ../../libs_src/sigar-master/include ${SPATH}/resources.cpp
+
+persistence.o: ${SPATH}/persistence.cpp
+	g++ -c ${DEFINES} ${FLAGS} -I ../../libs_src/sqllite3 ${INC} ${SPATH}/persistence.cpp
+
+old_files_data.o: ${SPATH}/old_files_data.cpp
+	g++ -c ${DEFINES} ${FLAGS} -I ../../libs_src/sqllite3 ${INC} ${SPATH}/old_files_data.cpp
+
+sftp_sched.o: ${SPATH}/sftp_sched.cpp
+	g++ -c ${DEFINES} ${FLAGS} ${INC} -I ../../libs_src/libssh2-1.8.0/include ${SPATH}/sftp_sched.cpp
+
+file_watcher.o: ${SPATH}/file_watcher.cpp
+	g++ -c ${DEFINES} ${FLAGS} ${INC} -I ../../libs_src/efsw/include ${SPATH}/file_watcher.cpp
+
+mails.o: ${SPATH}/smtp/mails.cpp
+	g++ -c ${DEFINES} ${FLAGS} ${INC} ${SPATH}/smtp/mails.cpp
+
+rdiff_sched.o: ${SPATH}/rdiff_sched.cpp
+	g++ -c ${DEFINES} ${FLAGS} ${INC} -I ../../libs_src/librsync-master/src -I ../../libs_src/librsync-master/build/src ${SPATH}/rdiff_sched.cpp
+
+zlib_sched.o: ${SPATH}/zlib_sched.cpp
+	g++ -c ${DEFINES} ${FLAGS} ${INC} -I ../lib/zlib-1.2.8 -I ../lib/zlib-1.2.8/build ${SPATH}/zlib_sched.cpp
+
+minigzip.o: ${SPATH}/minigzip.c
+	gcc -c ${DEFINES} ${FLAGS} ${INC} -I ../lib/zlib-1.2.8 -I ../lib/zlib-1.2.8/build ${SPATH}/minigzip.c
+
+basic_smtp_comm.o: ${SPATH}/smtp/basic_smtp_comm.cpp
+	g++ -c ${DEFINES} ${FLAGS} ${INC} ${SPATH}/smtp/basic_smtp_comm.cpp
+
+tls_smtp_comm.o: ${SPATH}/smtp/tls_smtp_comm.cpp
+	g++ -c ${DEFINES} ${FLAGS} ${INC} ${SPATH}/smtp/tls_smtp_comm.cpp
+
+ssl_smtp_comm.o: ${SPATH}/smtp/ssl_smtp_comm.cpp
+	g++ -c ${DEFINES} ${FLAGS} ${INC} ${SPATH}/smtp/ssl_smtp_comm.cpp
+
+quickmail_auth_login.o: ${SPATH}/smtp/quickmail_auth_login.cpp
+	g++ -c ${DEFINES} ${FLAGS} ${INC} ${SPATH}/smtp/quickmail_auth_login.cpp
+
+sqlite3.o:
+	gcc -c ${DEFINES} ${FLAGS} -I ../../libs_src/sqllite3 ../../libs_src/sqllite3/sqlite3.c
+
+main_version:
+	g++ -c ${DEFINES} ${FLAGS} ${SPATH}/main_version.cpp
+
+%.o : ${SPATH}/%.cpp
+	g++ -c ${DEFINES} ${FLAGS} ${INC} $<
+
+clean:
+	rm -f *.o allsafe

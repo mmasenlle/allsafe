@@ -1,0 +1,100 @@
+#@"C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\vcvarsall.bat" x86
+
+# C:\src\boost_1_55_0\stage\lib
+
+OBJ=scheduler.obj resources.obj wserver.obj musched.obj props_sched.obj \
+	persistence.obj journal.obj servlets.obj md5.obj prios.obj dirs.obj \
+	sftp_sched.obj file_watcher.obj mod_files.obj wmi__.obj mssql.obj dict.obj \
+	musched_version.obj cc_rules.obj #win_service.obj #fsevent_reader.obj
+DEFINES=/D_WIN32_WINNT=0x0501 /DWIN32 /D_DEBUG
+FLAGS=/EHsc /Od /Zi #/Ot
+INC=/IC:/src/boost_1_55_0
+SPATH=../src
+
+all: ${OBJ} sqlite3.obj musched_version
+	link ${OBJ} /OUT:"musched.exe" /DEBUG /PDB:"musched.pdb" /INCREMENTAL \
+		sqlite3.obj /LIBPATH:"C:/src/boost_1_55_0/stage/lib" \
+		/LIBPATH:"C:/src/pruebas_isam/myfcomun_Debug" \
+		/NODEFAULTLIB:LIBCMT /NODEFAULTLIB:LIBCMTD \
+		/SUBSYSTEM:CONSOLE /LARGEADDRESSAWARE /MACHINE:X86 /NOLOGO \
+		/ERRORREPORT:PROMPT sigar.lib DVmisam.lib DVdisam.lib FVcode.lib DVcode.lib \
+		libssh2.lib efsw-debug.lib
+
+resources.obj: ${SPATH}/resources.cpp
+	cl ${DEFINES} ${FLAGS} ${INC} /IC:/src/sigar/sigar/include ${SPATH}/resources.cpp /c
+
+scheduler.obj: ${SPATH}/scheduler.cpp
+	cl ${DEFINES} ${FLAGS} ${INC} ${SPATH}/scheduler.cpp /c
+
+musched.obj: ${SPATH}/musched.cpp
+	cl ${DEFINES} ${FLAGS} ${INC} ${SPATH}/musched.cpp /c
+
+wserver.obj: ${SPATH}/wserver.cpp
+	cl ${DEFINES} ${FLAGS} ${INC} ${SPATH}/wserver.cpp /c
+
+props_sched.obj: ${SPATH}/props_sched.cpp
+	cl ${DEFINES} ${FLAGS} ${INC} ${SPATH}/props_sched.cpp /c
+
+fsevent_reader.obj: ${SPATH}/fsevent_reader.cpp
+	cl ${DEFINES} ${FLAGS} ${INC} /IC:/src/pruebas_isam/DkDisam/DVdisam/headers \
+		/IC:/src/pruebas_isam/DkDisam /IC:/src/pruebas_isam/DkDisam/DVmisam \
+		${SPATH}/fsevent_reader.cpp /c
+
+servlets.obj: ${SPATH}/servlets.cpp
+	cl ${DEFINES} ${FLAGS} ${INC} ${SPATH}/servlets.cpp /c
+
+persistence.obj: ${SPATH}/persistence.cpp
+	cl ${DEFINES} ${FLAGS} /IC:/srctests/sqllite3 ${INC} \
+		${SPATH}/persistence.cpp /c
+
+journal.obj: ${SPATH}/journal.cpp
+	cl ${DEFINES} ${FLAGS} ${INC} ${SPATH}/journal.cpp /c
+
+md5.obj: ${SPATH}/md5.cpp
+	cl ${DEFINES} ${FLAGS} ${SPATH}/md5.cpp /c
+
+prios.obj: ${SPATH}/prios.cpp
+	cl ${DEFINES} ${FLAGS} ${INC} ${SPATH}/prios.cpp /c
+
+dirs.obj: ${SPATH}/dirs.cpp
+	cl ${DEFINES} ${FLAGS} ${INC} ${SPATH}/dirs.cpp /c
+
+cc_rules.obj: ${SPATH}/cc_rules.cpp
+	cl ${DEFINES} ${FLAGS} ${INC} ${SPATH}/cc_rules.cpp /c
+
+sftp_sched.obj: ${SPATH}/sftp_sched.cpp
+	cl ${DEFINES} ${FLAGS} ${INC} /IC:/srctests/libssh2/include ${SPATH}/sftp_sched.cpp /c
+
+file_watcher.obj: ${SPATH}/file_watcher.cpp
+	cl ${DEFINES} ${FLAGS} ${INC} /IC:/srctests/efsw/include ${SPATH}/file_watcher.cpp /c
+
+mod_files.obj: ${SPATH}/mod_files.cpp
+	cl ${DEFINES} ${FLAGS} ${INC} ${SPATH}/mod_files.cpp /c
+
+mssql.obj: ${SPATH}/mssql.cpp
+	cl ${DEFINES} ${FLAGS} ${INC} ${SPATH}/mssql.cpp /c
+
+dict.obj: ${SPATH}/dict.cpp
+	cl ${DEFINES} ${FLAGS} ${INC} ${SPATH}/dict.cpp /c
+
+wmi__.obj: ${SPATH}/wmi__.cxx
+	cl ${DEFINES} ${FLAGS} ${SPATH}/wmi__.cxx /c
+
+win_service.obj: ${SPATH}/win_service.cxx
+	cl ${DEFINES} ${FLAGS} ${SPATH}/win_service.cxx /c
+
+musched_version.obj:
+	cl ${DEFINES} ${FLAGS} ${SPATH}/musched_version.cpp /c
+
+musched_version:
+	cl ${DEFINES} ${FLAGS} ${SPATH}/musched_version.cpp /c
+
+sqlite3.obj:
+	cl ${DEFINES} ${FLAGS} /IC:/srctests/sqllite3 \
+		C:/srctests/sqllite3/sqlite3.c /c
+
+clean:
+	rm *.obj *.exe *.ilk *.pdb
+
+cp_to_L:
+	cp ${SPATH}/* L:/MUSCHED/src

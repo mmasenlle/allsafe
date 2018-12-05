@@ -1,0 +1,243 @@
+#include <time.h>
+#include <stdio.h>
+#include <string>
+#include <map>
+#include <boost/foreach.hpp>
+#include "props_sched.h"
+extern "C" {
+#include "Mjisam.h"
+#include "Misam.h"
+}
+
+struct key1
+{
+	char str[256];
+//	long long n1,n2;
+	int n1,n2,n3,n4;
+};
+static void dump(char *data)
+{
+	int i=0;
+	for (i=0;i<1568;i++) {
+		unsigned char c = data[i];
+		printf("data(%04d): 0x%02x %03d %c | ", i, c, c, isprint(c)?c:'.');
+		if (i%4==3) printf("\n");
+		if (i>200 && !data[i] && !data[i-1] && !data[i-2] && !data[i-3] && !data[i-4] && !data[i-5] && !data[i-6] && !data[i-7] && !data[i-8] && !data[i-9] && !data[i-10]) return;
+	}
+}
+static void dump2(unsigned char *data)
+{
+	int i=0;char str[256];int st=0,cnt=0;long long n=0;
+	for (i=0;i<1568;i++) {//printf("%d/%d/%d--", i, st, cnt);
+		switch (st) {
+		case 0: st=data[i]; if(st==0) return; break;
+		case 9: if (!cnt) { cnt = data[i++]; if (!cnt) {st=0;printf("   (empty)\n");}}
+				else {memcpy(str, &data[i], cnt);i+=cnt-1;str[cnt]=0;cnt=0;st=0;
+				printf("   %s\n", str);
+				}
+				break;
+		case 11: n = *((long long *)&data[i]);st=0;i+=7;
+				printf("   %lld\n", n);
+
+		}
+//		printf("%d/%d/%d /// ", i, st, cnt);
+	}
+}
+struct rdata_t { char str[6][256]; long long n[2];};
+static void convert(unsigned char *data, struct rdata_t *rdata)
+{
+	int i=0;char str[256];int st=0,cnt=0;long long n=0;int istr=0,in = 0;
+	for (i=0;i<1568;i++) {//printf("%d/%d/%d--", i, st, cnt);
+		switch (st) {
+		case 0: st=data[i]; if(st==0) return; break;
+		case 9: if (!cnt) { cnt = data[i++]; if (!cnt) {st=0;istr++;}}
+				else {memcpy(&rdata->str[istr], &data[i], cnt);i+=cnt-1;rdata->str[istr][cnt]=0;cnt=0;st=0;istr++;
+				//printf("   %s\n", str);
+				}
+				break;
+		case 11: rdata->n[in] = *((long long *)&data[i]);st=0;i+=7;in++;
+//				printf("   %lld\n", n);
+				break;
+		}
+//		printf("%d/%d/%d /// ", i, st, cnt);
+	}
+}
+
+static long long oldest = 100000000000000;
+static long long last_oldest = 0;
+static int dirtiest = 0;
+static int last_dirtiest = 10000;
+
+struct tst_dirty_t {
+    long long tst;
+    long long changes;
+    tst_dirty_t(long long t, long long c):tst(t),changes(c) {};
+    bool operator <(const tst_dirty_t& rhs) const {
+        return (tst + 30000) < rhs.tst || changes > rhs.changes;
+    }
+};
+static std::multimap<tst_dirty_t, boost::shared_ptr<fentry_t> > oldpaths;
+static boost::shared_ptr<fentry_t> get_mm_oldest_file()
+{
+    boost::shared_ptr<fentry_t> oldest_file;
+    if (!oldpaths.empty()) {
+        oldest_file = oldpaths.begin()->second;
+        oldpaths.erase(oldpaths.begin());
+    }
+    return oldest_file;
+}
+int nc=0,ne=0,st=0;
+extern int persistence_insert0(const std::string &fpath, int tt, int cnt);
+
+std::string fsevent_debug_str()
+{
+    char buf[256];
+    std::string s = "<li><b>fsevent_debug_str()</b></li>";
+    int n = sprintf(buf, "<li>%s: %d</li>", "oldpaths.size()", oldpaths.size()); s.append(buf, n);
+    n = sprintf(buf, "<li>%s: %d</li>", "fsevent::nc", nc); s.append(buf, n);
+    n = sprintf(buf, "<li>%s: %d</li>", "fsevent::ne", ne); s.append(buf, n);
+    n = sprintf(buf, "<li>%s: %d</li>", "last_oldest", last_oldest); s.append(buf, n);
+    n = sprintf(buf, "<li>%s: %d</li>", "last_dirtiest", last_dirtiest); s.append(buf, n);
+    return s;
+}
+
+//int main(int argc, char *argv[])
+boost::shared_ptr<fentry_t> fsevent_get_oldest_file()
+{
+    boost::shared_ptr<fentry_t> oldest_fentry = get_mm_oldest_file();
+    if (oldest_fentry)
+    {
+        return oldest_fentry;
+    }
+    char *res,*strerread;
+    int kanal;
+    int erread,i;
+    const char *fsev_fname = props::get().database.c_str(); //"fsevent";
+
+    for (i=0; i<1; i++)
+    {
+        nc=0;
+        ne=0;
+        kanal = my_jisopen((char*)fsev_fname,MODO_UPDATE,1,OPT_AUTOLOCK);
+        if (kanal < 0)
+        {
+            printf ("No fileisam %s (%s)\n", fsev_fname, my_jiserror(kanal));
+            return oldest_fentry;
+        }
+        erread=my_jisstartfirst(kanal, 2);
+        if (erread)
+        {
+            strerread = my_jiserror( erread);
+            printf("Error my_jisstartfirst(%d, %d): %d: %s\n", kanal, 2,erread,strerread);
+        }
+        res = my_jisreadnext( kanal );
+        erread = my_jiserrno( kanal );
+        if (erread) strerread = my_jiserror( erread);
+        while (!my_jiseof( kanal ))
+            if (!res)
+            {
+                ne++;// printf("%d) Error: %d-%s\n",nc,erread,strerread);
+                if (erread == ELOCKED)
+                {
+                    my_jisstartpos( kanal, 0, J_ISNEXT);
+                    printf("Saltando al siguiente\n");
+                }
+            }
+            else
+            {
+                int i;
+
+                int r;
+                struct rdata_t rdata;
+                nc++;
+                convert((unsigned char *)res, &rdata);
+ //               if (rdata.n[0] < oldest) oldest = rdata.n[0];
+ //               if (rdata.n[1] > dirtiest) dirtiest = rdata.n[1];
+ //               oldest_file = rdata.str[5];
+                if (rdata.n[0]/1000 > (time(0) - 5)) {
+            //wait 5s before erasing from file because it'll follow more events
+                    oldest_fentry = get_mm_oldest_file();
+                    my_jisclose( kanal );
+                    return oldest_fentry;
+                }
+                boost::shared_ptr<fentry_t> fentry(new fentry_t);
+                fentry->fname = rdata.str[5];
+                fentry->sname = rdata.str[0];
+                fentry->event = rdata.str[1];
+                fentry->initime = rdata.n[0];
+               	r = my_jisdelete_curr(kanal);
+                erread = my_jiserrno( kanal );
+                if (erread || r) {strerread = my_jiserror( erread);
+                    printf("Error deleting %d-%s\n", erread, strerread);
+                }
+                if (fentry->fname.size() && fentry->fname[fentry->fname.size()-1] != '/')   //is a directory
+                {
+                    persistence_insert0(fentry->fname, rdata.n[0]/1000, rdata.n[1]);
+                    oldpaths.insert(std::pair<tst_dirty_t, boost::shared_ptr<fentry_t> >
+                                    (tst_dirty_t(rdata.n[0],rdata.n[1]), fentry));
+                    if (oldpaths.size() > 7) {
+                        oldest_fentry = get_mm_oldest_file();
+                        my_jisclose( kanal );
+                        return oldest_fentry;
+                    }
+                }
+
+//printf("\nbefore\n");fflush(stdout);//getchar();
+                res = my_jisreadnext( kanal );
+//printf("\nafter\n");fflush(stdout);//getchar();
+
+                erread = my_jiserrno( kanal );
+                if (erread)
+                {
+                    strerread = my_jiserror( erread);
+//		printf("\nError reading next from %d (%d-%s)\n",nc,erread,strerread);//dump2(res);
+                }
+            }
+        my_jisclose( kanal );
+        last_oldest=oldest;
+        printf("\n%d)Total: %d, Oldest: %lld, dirtiest: %d, errors: %d\n\n", i, nc, oldest, dirtiest, ne);
+//if (getchar() == 'q') break;
+        oldest = 1000000000000000000;
+    }
+    oldest_fentry = get_mm_oldest_file();
+    return oldest_fentry;
+}
+
+void fsevent_put_tx(const boost::shared_ptr<fentry_t> &fentry, int psize)
+{
+    char autotupla[2048];
+    int kanal2 = my_jisopen(const_cast<char*>(props::get().trxdb.c_str()),MODO_UPDATE,1,OPT_AUTOLOCK);
+    if (kanal2 < 0)
+    { printf ("No fileisam %s (%s)\n", props::get().trxdb.c_str(), my_jiserror(kanal2));
+        return ;
+    }
+    //convert2(&rdata, autotupla);
+    {
+	int n; long long aux = 0;
+	char *pdata = autotupla;
+
+	std::string relfp = fentry->relfp;
+    BOOST_FOREACH(char &c,relfp) if (c=='.') c='#';
+	std::string pname = props::get().patchd + relfp; // + "#" + fentry->sname;
+//	if (fentry->revn <= 1) fentry->event = "NEW";
+
+	n = pname.size(); *pdata++ = 9; *pdata++ = n; *pdata++ = 0; memcpy(pdata, pname.c_str(), n); pdata += n;
+	*pdata++ = 11; memcpy(pdata, &aux, 8); pdata += 8;
+/*	aux = psize;*/ *pdata++ = 11; memcpy(pdata, &aux, 8); pdata += 8;
+/*	aux = fentry->initime;*/ *pdata++ = 11; memcpy(pdata, &aux, 8); pdata += 8;
+	n = fentry->event.size(); *pdata++ = 9; *pdata++ = n; *pdata++ = 0; memcpy(pdata, fentry->event.c_str(), n); pdata += n;
+	*pdata++ = 0;
+    }
+//    dump(autotupla);dump2(autotupla);
+//		erread=my_jisstartfirst(kanal2, 1);
+    int erread=my_jiswrite(kanal2, autotupla);
+    if (erread) {
+        printf("Error my_jiswrite(%d, %d): %d: %s\n", kanal2, 1,erread,my_jiserror( erread));
+    } else {
+        printf("Inserting %s\n", fentry->fname.c_str());
+    //insertar
+
+    }
+    my_jisclose( kanal2 );
+}
+

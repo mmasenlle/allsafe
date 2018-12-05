@@ -1,0 +1,108 @@
+#@"C:\mingw-w64\x86_64-5.2.0-posix-seh-rt_v4-rev0\mingw-w64.bat"
+
+OBJ=sched_queues.o resources.o wserver.o props_sched.o main.o \
+	old_files_data.o ofd_processer.o persistence.o \
+	prios.o dirs.o dict.o explore.o \
+	sftp_sched.o file_watcher.o mod_files.o ptasks.o \
+	main_version.o cc_rules.o sqlite3.o rdiff_sched.o sha1.o mails.o \
+	localBackend.o sshBackend.o zlib_sched.o conf_sched.o main_test.o \
+	quickmail_auth_login.o explore_day.o minigzip.o \
+	basic_smtp_comm.o tls_smtp_comm.o ssl_smtp_comm.o styles.o allsafe.o \
+	restore_folder.o http_client.o cipher.o vshadow.o
+
+FLAGS_DEBUG=-O -g -DDEBUG -DWITH_OPENSSL
+FLAGS_RELEASE=-O2 -DNDEBUG -DWITH_OPENSSL
+SPATH=../src
+INC=-I C:\srctests\boost_1_59_0 -I C:\srctests\nowide_standalone -I ${SPATH} -I ${SPATH}/smtp
+BOOST_LIBS_RELEASE=C:\srctests\boost_1_59_0\stage\lib\libboost_system-mgw52-mt-1_59.a \
+		   C:\srctests\boost_1_59_0\stage\lib\libboost_thread-mgw52-mt-1_59.a \
+		   C:\srctests\boost_1_59_0\stage\lib\libboost_serialization-mgw52-mt-1_59.a \
+		   C:\srctests\boost_1_59_0\stage\lib\libboost_log_setup-mgw52-mt-1_59.a \
+		   C:\srctests\boost_1_59_0\stage\lib\libboost_log-mgw52-mt-1_59.a \
+		   C:\srctests\boost_1_59_0\stage\lib\libboost_locale-mgw52-mt-1_59.a \
+		   C:\srctests\boost_1_59_0\stage\lib\libboost_date_time-mgw52-mt-1_59.a \
+		   C:\srctests\boost_1_59_0\stage\lib\libboost_program_options-mgw52-mt-1_59.a \
+		   C:\srctests\boost_1_59_0\stage\lib\libboost_filesystem-mgw52-mt-1_59.a
+BOOST_LIBS_DEBUG=C:\srctests\boost_1_59_0\stage\lib\libboost_system-mgw52-mt-d-1_59.a \
+		   C:\srctests\boost_1_59_0\stage\lib\libboost_thread-mgw52-mt-d-1_59.a \
+		   C:\srctests\boost_1_59_0\stage\lib\libboost_serialization-mgw52-mt-d-1_59.a \
+		   C:\srctests\boost_1_59_0\stage\lib\libboost_log_setup-mgw52-mt-d-1_59.a \
+		   C:\srctests\boost_1_59_0\stage\lib\libboost_log-mgw52-mt-d-1_59.a \
+		   C:\srctests\boost_1_59_0\stage\lib\libboost_locale-mgw52-mt-d-1_59.a \
+		   C:\srctests\boost_1_59_0\stage\lib\libboost_date_time-mgw52-mt-d-1_59.a \
+		   C:\srctests\boost_1_59_0\stage\lib\libboost_program_options-mgw52-mt-d-1_59.a \
+		   C:\srctests\boost_1_59_0\stage\lib\libboost_filesystem-mgw52-mt-d-1_59.a
+
+FLAGS=${FLAGS_DEBUG}
+BOOST_LIBS=${BOOST_LIBS_DEBUG}
+
+ifeq ($(DEBUG), 0)
+FLAGS=${FLAGS_RELEASE}
+BOOST_LIBS=${BOOST_LIBS_RELEASE}
+endif
+
+STATIC_LIBS=libsigar.a libssh2.a libefsw.a librsync.a libzlibstatic.a libssl.a libcrypto.a
+DIR_LIBS=
+DYNAMIC_LIBS=-lws2_32 -lwsock32 -lbcrypt -lcrypt32 -lnetapi32 -lversion -liconv -lgdi32 -lole32 -lVssApi
+
+MODULE_NAME=allsafe
+
+.PHONY: clean all
+
+all: ${OBJ} main_version
+	g++ -o ${MODULE_NAME} ${OBJ} ${BOOST_LIBS} ${STATIC_LIBS} ${DIR_LIBS} ${DYNAMIC_LIBS}
+
+resources.o: ${SPATH}/resources.cpp
+	g++ -c ${FLAGS} ${INC} -I C:/src/sigar/sigar/include ${SPATH}/resources.cpp
+
+old_files_data.o: ${SPATH}/old_files_data.cpp
+	g++ -c ${FLAGS} -I C:/srctests/sqllite3 ${INC} ${SPATH}/old_files_data.cpp
+
+persistence.o: ${SPATH}/persistence.cpp
+	g++ -c ${FLAGS} -I C:/srctests/sqllite3 ${INC} ${SPATH}/persistence.cpp
+
+sftp_sched.o: ${SPATH}/sftp_sched.cpp
+	g++ -c ${FLAGS} ${INC} -I C:/srctests/libssh2/include ${SPATH}/sftp_sched.cpp
+
+file_watcher.o: ${SPATH}/file_watcher.cpp
+	g++ -c ${FLAGS} ${INC} -I C:/srctests/efsw/include ${SPATH}/file_watcher.cpp
+
+mails.o: ${SPATH}/smtp/mails.cpp
+	g++ -c ${FLAGS} ${INC} ${SPATH}/smtp/mails.cpp
+
+rdiff_sched.o: ${SPATH}/rdiff_sched.cpp
+	g++ -c ${FLAGS} ${INC} -I C:/srctests/librsync/src -I C:/srctests/librsync/build/src ${SPATH}/rdiff_sched.cpp
+
+zlib_sched.o: ${SPATH}/zlib_sched.cpp
+	g++ -c ${FLAGS} ${INC} -I C:/srctests/zlib-1.2.8 -I C:/srctests/zlib-1.2.8/build ${SPATH}/zlib_sched.cpp
+
+main_version:
+	g++ -c ${FLAGS} ${SPATH}/main_version.cpp
+
+basic_smtp_comm.o: ${SPATH}/smtp/basic_smtp_comm.cpp
+	g++ -c ${FLAGS} ${INC} ${SPATH}/smtp/basic_smtp_comm.cpp
+
+tls_smtp_comm.o: ${SPATH}/smtp/tls_smtp_comm.cpp
+	g++ -c ${FLAGS} ${INC} ${SPATH}/smtp/tls_smtp_comm.cpp
+
+ssl_smtp_comm.o: ${SPATH}/smtp/ssl_smtp_comm.cpp
+	g++ -c ${FLAGS} ${INC} -I C:/srctests/openssl-1.0.2k/include ${SPATH}/smtp/ssl_smtp_comm.cpp
+
+cipher.o: ${SPATH}/cipher.cpp
+	g++ -c ${FLAGS} ${INC} -I C:/srctests/openssl-1.0.2k/include ${SPATH}/cipher.cpp
+
+quickmail_auth_login.o: ${SPATH}/smtp/quickmail_auth_login.cpp
+	g++ -c ${FLAGS} ${INC} ${SPATH}/smtp/quickmail_auth_login.cpp
+
+sqlite3.o:
+	gcc -c ${FLAGS} -I C:/srctests/sqllite3 C:/srctests/sqllite3/sqlite3.c
+
+minigzip.o: ${SPATH}/minigzip.c
+	gcc -c ${FLAGS} -I C:/srctests/zlib-1.2.8 -I C:/srctests/zlib-1.2.8/build ${SPATH}/minigzip.c
+
+%.o : ${SPATH}/%.cpp
+	g++ -c ${FLAGS} ${INC} $<
+
+clean:
+	rm -f ${OBJ} ${MODULE_NAME}.exe
+
